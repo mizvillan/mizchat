@@ -68,8 +68,12 @@ db.exec(`
   );
 `);
 
+// Ensure only the main MizCHAT channel exists
+// Remove any old/extra channels and then (re)seed MizCHAT.
+db.prepare("DELETE FROM channels WHERE lower(name) NOT IN ('mizchat')").run();
+
 // Seed Channels (ensure MizCHAT exists and is first)
-const seedChannels = ['MizCHAT', 'general', 'random', 'help'];
+const seedChannels = ['MizCHAT'];
 const insertChannel = db.prepare('INSERT OR IGNORE INTO channels (id, name) VALUES (?, ?)');
 seedChannels.forEach(name => insertChannel.run(uuidv4(), name));
 // Normalize legacy names (e.g., MIZCHAT) to MizCHAT

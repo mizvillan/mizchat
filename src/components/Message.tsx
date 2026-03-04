@@ -49,9 +49,14 @@ export const Message: React.FC<MessageProps> = ({ message, onReply, onEdit, onDe
       {/* Avatar */}
       <div className="flex-shrink-0 cursor-pointer mt-0.5">
         <img 
-          src={message.avatar || `https://ui-avatars.com/api/?name=${message.username}&background=random`} 
+          src={
+            message.avatar ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              message.username || ''
+            )}&length=2&background=random&color=ffffff&size=128`
+          } 
           alt={message.username} 
-          className="w-10 h-10 rounded-full object-cover hover:opacity-80 transition-opacity"
+          className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
         />
       </div>
 

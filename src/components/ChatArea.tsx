@@ -21,6 +21,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
   const [file, setFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -243,8 +244,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-[2px] scroll-smooth custom-scrollbar flex flex-col bg-slate-950/30">
-        <div className="flex-1"></div> {/* Spacer to push messages down if few */}
-        
         {/* Channel Welcome Message */}
         <div className="mb-8 mt-4 px-4 animate-fade-up">
             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
@@ -335,10 +334,33 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
                   >
                     <Mic className="w-5 h-5" />
                   </button>
-
-                  <button className="text-zinc-300 hover:text-yellow-400 transition-colors">
+                
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker((prev) => !prev)}
+                      className="text-zinc-300 hover:text-yellow-400 transition-colors"
+                    >
                       <Smile className="w-5 h-5" />
-                  </button>
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-8 right-0 bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl grid grid-cols-6 gap-1 text-xl z-20">
+                        {['😀','😂','😎','😍','😭','😡','👍','🔥','💀','🤔','👀','⭐'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            className="hover:bg-white/10 rounded-md leading-none"
+                            onClick={() => {
+                              setInputValue((prev) => prev + emoji);
+                              setShowEmojiPicker(false);
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   
                   { (inputValue.trim() || file) && (
                       <button 

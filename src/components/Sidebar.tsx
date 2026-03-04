@@ -22,15 +22,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [friendUsername, setFriendUsername] = useState('');
   const [friendError, setFriendError] = useState('');
-  const userInitial = (user?.display_name || user?.username || 'M').trim().charAt(0).toUpperCase();
+  const baseName = (user?.display_name || user?.username || 'M').trim();
+  const userInitial = baseName.substring(0, 2).toUpperCase();
 
   useEffect(() => {
     if (!socket) return;
 
     socket.on('channels_list', (list: Channel[]) => {
-      setChannels(list);
-      if (!currentChannel && list.length > 0) {
-        setCurrentChannel(list[0]);
+      // Only show the main MizCHAT channel in the sidebar
+      const filtered = list.filter(
+        (ch) => ch.name.toLowerCase() === 'mizchat'
+      );
+      const finalList = filtered.length > 0 ? filtered : list;
+
+      setChannels(finalList);
+      if (!currentChannel && finalList.length > 0) {
+        setCurrentChannel(finalList[0]);
       }
     });
 
