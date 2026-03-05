@@ -14,7 +14,7 @@ export const ServerRail: React.FC = () => {
 
       <div className="w-8 h-[2px] bg-white/10 rounded-lg mx-auto" />
 
-      {/* Server 1 (MizChat Main) */}
+      {/* Server 1 (Discord Clone Main) */}
       <div className="relative group">
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-white rounded-r-full -ml-1 transition-all duration-200" />
         <button className="w-12 h-12 bg-indigo-500 rounded-[16px] transition-all duration-200 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
@@ -35,7 +35,7 @@ export const ServerRail: React.FC = () => {
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2 bg-white rounded-r-full -ml-1 opacity-0 group-hover:opacity-100 group-hover:h-5 transition-all duration-200" />
         <a 
           href="/api/source" 
-          download="mizchat_source.txt"
+          download="discord_clone_source.txt"
           className="w-12 h-12 bg-white/5 group-hover:bg-white/10 rounded-[24px] group-hover:rounded-[16px] transition-all duration-200 flex items-center justify-center text-zinc-300 group-hover:text-white"
           title="Download Source Code"
         >

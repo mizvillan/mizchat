@@ -17,6 +17,11 @@ export const Message: React.FC<MessageProps> = ({ message, onReply, onEdit, onDe
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
+  const avatarInitial = (message.display_name || message.username || 'M').trim().charAt(0).toUpperCase();
+  const resolvedAvatar =
+    message.avatar && !message.avatar.includes('ui-avatars.com')
+      ? message.avatar
+      : `https://ui-avatars.com/api/?name=${avatarInitial}&background=3b82f6&color=ffffff&size=128`;
 
   const isOwner = user?.id === message.user_id;
   const isAdmin = user?.is_admin === 1;
@@ -49,12 +54,7 @@ export const Message: React.FC<MessageProps> = ({ message, onReply, onEdit, onDe
       {/* Avatar */}
       <div className="flex-shrink-0 cursor-pointer mt-0.5">
         <img 
-          src={
-            message.avatar ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              message.username || ''
-            )}&length=2&background=random&color=ffffff&size=128`
-          } 
+          src={resolvedAvatar} 
           alt={message.username} 
           className="w-9 h-9 rounded-full object-cover hover:opacity-80 transition-opacity"
         />

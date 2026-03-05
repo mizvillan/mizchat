@@ -15,6 +15,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const initial = (user?.display_name || user?.username || 'M').trim().charAt(0).toUpperCase();
+  const resolvedAvatar =
+    avatar && !avatar.includes('ui-avatars.com')
+      ? avatar
+      : `https://ui-avatars.com/api/?name=${initial}&background=3b82f6&color=ffffff&size=256`;
 
   const handleSave = async () => {
     let newAvatar = avatar;
@@ -52,10 +56,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
         </div>
 
         <div className="px-6 pb-6 relative">
-          <div className="absolute -top-12 left-6 group cursor-pointer">
-            <div className="relative w-24 h-24 rounded-full border-4 border-slate-950 overflow-hidden bg-white/5">
+          <div className="absolute -top-10 left-6 group cursor-pointer">
+            <div className="relative w-20 h-20 rounded-full border-4 border-slate-950 overflow-hidden bg-white/5 shadow-lg">
               <img 
-                src={file ? URL.createObjectURL(file) : (avatar || `https://ui-avatars.com/api/?name=${initial}&background=6366f1&color=ffffff&size=256`)} 
+                src={file ? URL.createObjectURL(file) : resolvedAvatar} 
                 className="w-full h-full object-cover" 
                 alt="" 
               />

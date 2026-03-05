@@ -11,6 +11,10 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
   const [activeUsers, setActiveUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const selectedInitial = (selectedUser?.display_name || selectedUser?.username || 'M').trim().charAt(0).toUpperCase();
+  const selectedAvatar =
+    selectedUser?.avatar && !selectedUser.avatar.includes('ui-avatars.com')
+      ? selectedUser.avatar
+      : `https://ui-avatars.com/api/?name=${selectedInitial}&background=3b82f6&color=ffffff&size=256`;
 
   useEffect(() => {
     if (!socket) return;
@@ -49,7 +53,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
             >
               <div className="relative">
                 <img 
-                  src={user.avatar || `https://ui-avatars.com/api/?name=${user.username}&background=random`} 
+                  src={(user.avatar && !user.avatar.includes('ui-avatars.com')) ? user.avatar : `https://ui-avatars.com/api/?name=${(user.display_name || user.username || 'M').trim().charAt(0).toUpperCase()}&background=3b82f6&color=ffffff&size=128`} 
                   className="w-8 h-8 rounded-full object-cover" 
                   alt="" 
                 />
@@ -81,7 +85,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
               {/* Avatar */}
               <div className="absolute -top-12 left-6 p-1 bg-slate-950 rounded-full shadow-lg">
                 <img 
-                  src={selectedUser.avatar || `https://ui-avatars.com/api/?name=${selectedInitial}&background=6366f1&color=ffffff&size=256`} 
+                  src={selectedAvatar} 
                   className="w-20 h-20 rounded-full object-cover border-4 border-slate-950" 
                   alt="" 
                 />

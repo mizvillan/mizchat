@@ -1,5 +1,5 @@
 {
-  "name": "MizChat",
+  "name": "Discord Clone",
   "description": "A Discord-style chat application with real-time messaging, voice notes, and friend system.",
   "requestFramePermissions": ["microphone"]
 }

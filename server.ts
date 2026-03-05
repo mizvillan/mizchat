@@ -15,10 +15,10 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 const PORT = Number(process.env.PORT) || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'mizchat-secret-key-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || 'discord-clone-secret-key-change-me';
 
 // Database Setup
-const db = new Database('mizchat.db');
+const db = new Database('discord-clone.db');
 db.pragma('journal_mode = WAL');
 
 // Initialize Tables
@@ -68,20 +68,18 @@ db.exec(`
   );
 `);
 
-// Ensure only the main MizCHAT channel exists
-// Remove any old/extra channels and then (re)seed MizCHAT.
-db.prepare("DELETE FROM channels WHERE lower(name) NOT IN ('mizchat')").run();
+// Ensure only the main general channel exists
+db.prepare("DELETE FROM channels WHERE lower(name) NOT IN ('general')").run();
 
-// Seed Channels (ensure MizCHAT exists and is first)
-const seedChannels = ['MizCHAT'];
+// Seed Channels (ensure general exists and is first)
+const seedChannels = ['general'];
 const insertChannel = db.prepare('INSERT OR IGNORE INTO channels (id, name) VALUES (?, ?)');
 seedChannels.forEach(name => insertChannel.run(uuidv4(), name));
-// Normalize legacy names (e.g., MIZCHAT) to MizCHAT
-db.prepare(`UPDATE channels SET name = 'MizCHAT' WHERE lower(name) = 'mizchat'`).run();
-// Ensure at least one channel exists
+// Normalize legacy names (e.g. mizchat) to general
+db.prepare(`UPDATE channels SET name = 'general' WHERE lower(name) = 'mizchat'`).run();
 const channelCount = db.prepare('SELECT count(*) as count FROM channels').get();
 if (channelCount.count === 0) {
-  insertChannel.run(uuidv4(), 'MizCHAT');
+  insertChannel.run(uuidv4(), 'general');
 }
 
 // Middleware
@@ -146,7 +144,7 @@ app.get('/api/source', (req, res) => {
     'src/components/Modals/ProfileModal.tsx'
   ];
 
-  let content = 'MIZCHAT SOURCE CODE BUNDLE\n\n';
+  let content = 'DISCORD CLONE SOURCE CODE BUNDLE\n\n';
 
   files.forEach(file => {
     try {
@@ -166,7 +164,7 @@ app.get('/api/source', (req, res) => {
   });
 
   res.setHeader('Content-Type', 'text/plain');
-  res.setHeader('Content-Disposition', 'attachment; filename="mizchat_source.txt"');
+  res.setHeader('Content-Disposition', 'attachment; filename="discord_clone_source.txt"');
   res.send(content);
 });
 
@@ -178,7 +176,7 @@ app.post('/api/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = uuidv4();
-    const isAdmin = username.toLowerCase() === 'mizvillan' ? 1 : 0; // Auto-admin for specific username if desired, or first user
+    const isAdmin = 0; // First user gets admin below
     
     // Check if first user
     const userCount = db.prepare('SELECT count(*) as count FROM users').get();
@@ -279,7 +277,7 @@ io.on('connection', (socket) => {
   const channels = db.prepare(`
     SELECT * FROM channels
     ORDER BY 
-      CASE WHEN lower(name) = 'mizchat' THEN 0 ELSE 1 END,
+      CASE WHEN lower(name) = 'general' THEN 0 ELSE 1 END,
       name COLLATE NOCASE
   `).all();
   socket.emit('channels_list', channels);

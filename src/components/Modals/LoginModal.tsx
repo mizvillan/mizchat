@@ -40,8 +40,8 @@ export const LoginModal = () => {
         
         <div className="p-8 relative z-10">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-glow">Welcome to MizChat</h1>
-            <p className="text-zinc-400">MIZVILLAN MADE THIS WEBSITE</p>
+            <h1 className="text-3xl font-bold text-white tracking-tight mb-2 text-glow">Welcome to Discord Clone</h1>
+            <p className="text-zinc-400">A real-time chat app</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -22,16 +22,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [friendUsername, setFriendUsername] = useState('');
   const [friendError, setFriendError] = useState('');
-  const baseName = (user?.display_name || user?.username || 'M').trim();
-  const userInitial = baseName.substring(0, 2).toUpperCase();
+  const userInitial = (user?.display_name || user?.username || 'M').trim().charAt(0).toUpperCase();
+  const userAvatar =
+    user?.avatar && !user.avatar.includes('ui-avatars.com')
+      ? user.avatar
+      : `https://ui-avatars.com/api/?name=${userInitial}&background=3b82f6&color=ffffff&size=128`;
 
   useEffect(() => {
     if (!socket) return;
 
     socket.on('channels_list', (list: Channel[]) => {
-      // Only show the main MizCHAT channel in the sidebar
+      // Only show the main general channel in the sidebar
       const filtered = list.filter(
-        (ch) => ch.name.toLowerCase() === 'mizchat'
+        (ch) => ch.name.toLowerCase() === 'general'
       );
       const finalList = filtered.length > 0 ? filtered : list;
 
@@ -111,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
                   className="w-full flex items-center px-2 py-[6px] rounded-[6px] group transition-all text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 >
                   <Hash className="w-4 h-4 mr-1.5 text-zinc-500" />
-                  <span className="truncate font-medium">MizCHAT</span>
+                  <span className="truncate font-medium">general</span>
                 </button>
               )}
               {channels.map(channel => (
@@ -145,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
                   className="w-full flex items-center px-2 py-[6px] rounded-[6px] group transition-all text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                 >
                   <div className="relative mr-2">
-                    <img src={friend.avatar || `https://ui-avatars.com/api/?name=${friend.username}&background=random`} className="w-6 h-6 rounded-full" alt="" />
+                    <img src={(friend.avatar && !friend.avatar.includes('ui-avatars.com')) ? friend.avatar : `https://ui-avatars.com/api/?name=${(friend.display_name || friend.username || 'M').trim().charAt(0).toUpperCase()}&background=3b82f6&color=ffffff&size=128`} className="w-6 h-6 rounded-full" alt="" />
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-zinc-900 rounded-full flex items-center justify-center">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                     </div>
@@ -178,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
             className="flex items-center hover:bg-white/5 p-1 rounded-md cursor-pointer flex-1 min-w-0 transition-colors group"
           >
             <div className="relative mr-2">
-               <img src={user?.avatar || `https://ui-avatars.com/api/?name=${userInitial}&background=3b82f6&color=ffffff&size=128`} className="w-8 h-8 rounded-full object-cover" alt="" />
+               <img src={userAvatar} className="w-8 h-8 rounded-full object-cover" alt="" />
                <div className="absolute bottom-0 right-0 w-3 h-3 bg-zinc-900 rounded-full flex items-center justify-center">
                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                </div>
@@ -188,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
               <div className="text-[11px] text-zinc-400 truncate leading-tight">#{user?.username}</div>
             </div>
           </div>
-          <a href="/api/source" download="mizchat_source.txt" className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors" title="Download Source">
+          <a href="/api/source" download="discord_clone_source.txt" className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors" title="Download Source">
             <Download className="w-5 h-5" />
           </a>
         </div>
@@ -237,7 +240,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
                     {friendRequests.map(req => (
                       <div key={req.id} className="flex items-center justify-between bg-zinc-800/50 p-2 rounded-md">
                         <div className="flex items-center gap-2">
-                          <img src={req.avatar || `https://ui-avatars.com/api/?name=${req.username}`} className="w-8 h-8 rounded-full" />
+                          <img src={(req.avatar && !req.avatar.includes('ui-avatars.com')) ? req.avatar : `https://ui-avatars.com/api/?name=${(req.display_name || req.username || 'M').trim().charAt(0).toUpperCase()}&background=3b82f6&color=ffffff&size=128`} className="w-8 h-8 rounded-full" />
                           <div>
                             <div className="text-sm font-medium text-white">{req.display_name}</div>
                             <div className="text-xs text-zinc-400">{req.username}</div>
@@ -263,7 +266,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
                   {friends.map(friend => (
                     <div key={friend.id} className="flex items-center justify-between p-2 hover:bg-zinc-800 rounded-md group">
                       <div className="flex items-center gap-2">
-                        <img src={friend.avatar || `https://ui-avatars.com/api/?name=${friend.username}`} className="w-8 h-8 rounded-full" />
+                        <img src={(friend.avatar && !friend.avatar.includes('ui-avatars.com')) ? friend.avatar : `https://ui-avatars.com/api/?name=${(friend.display_name || friend.username || 'M').trim().charAt(0).toUpperCase()}&background=3b82f6&color=ffffff&size=128`} className="w-8 h-8 rounded-full" />
                         <div>
                           <div className="text-sm font-medium text-white">{friend.display_name}</div>
                           <div className="text-xs text-zinc-400">{friend.status}</div>

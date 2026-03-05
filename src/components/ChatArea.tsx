@@ -188,7 +188,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
             <MessageSquare className="w-8 h-8 text-zinc-300" />
         </div>
         <div className="text-center">
-            <h3 className="text-lg font-bold text-white mb-1">Welcome to MizChat</h3>
+            <h3 className="text-lg font-bold text-white mb-1">Welcome to Discord Clone</h3>
             <p className="text-sm text-zinc-400">Select a channel to start chatting</p>
         </div>
       </div>
@@ -196,14 +196,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col panel rounded-2xl relative overflow-hidden animate-fade-up">
+    <div className="flex-1 min-h-0 flex flex-col panel rounded-2xl relative overflow-hidden animate-fade-up">
       {/* Header */}
       <div className="h-12 panel-header flex items-center px-4 justify-between shadow-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-zinc-400" />
           <span className="font-bold text-white text-base">{channel.name}</span>
           {channel.type === 'voice' && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Voice</span>}
-          {channel.name === 'MIZCHAT' && <span className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Official Channel"></span>}
+          {channel.name.toLowerCase() === 'general' && <span className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Default Channel"></span>}
         </div>
         
         <div className="flex items-center gap-4">
@@ -243,7 +243,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-[2px] scroll-smooth custom-scrollbar flex flex-col bg-slate-950/30">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-[2px] scroll-smooth custom-scrollbar flex flex-col bg-slate-950/30">
         {/* Channel Welcome Message */}
         <div className="mb-8 mt-4 px-4 animate-fade-up">
             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
@@ -374,7 +374,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
             </div>
         </div>
         <div className="text-[10px] text-zinc-500 mt-2 text-right select-none font-mono opacity-40">
-            MIZVILLAN MADE THIS WEBSITE
+            Discord Clone
         </div>
       </div>
     </div>

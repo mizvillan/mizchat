@@ -27,9 +27,9 @@ export const Layout = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full border-2 border-indigo-400/40 border-t-indigo-400 animate-spin" />
-              <h1 className="text-xl font-bold tracking-wide text-glow">Connecting to MizChat...</h1>
+              <h1 className="text-xl font-bold tracking-wide text-glow">Connecting to Discord Clone...</h1>
             </div>
-            <p className="text-zinc-400 text-[10px] mt-4 font-mono tracking-widest opacity-60">MIZVILLAN MADE THIS WEBSITE</p>
+            <p className="text-zinc-400 text-[10px] mt-4 font-mono tracking-widest opacity-60">DISCORD CLONE</p>
         </div>
       </div>
     );
@@ -46,7 +46,7 @@ export const Layout = () => {
         <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="text-zinc-400">
           <Menu className="w-6 h-6" />
         </button>
-        <span className="font-bold text-white tracking-tight">MizChat</span>
+        <span className="font-bold text-white tracking-tight">Discord Clone</span>
         <button onClick={() => setIsMembersOpen(!isMembersOpen)} className="text-zinc-400">
           <Users className="w-6 h-6" />
         </button>
@@ -66,8 +66,8 @@ export const Layout = () => {
       />
 
       {/* 3. Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 pt-12 md:pt-0 relative">
-        <div className="flex-1 flex flex-col p-2 sm:p-3 md:p-4">
+      <div className="flex-1 min-h-0 flex flex-col min-w-0 pt-12 md:pt-0 relative">
+        <div className="flex-1 min-h-0 flex flex-col p-2 sm:p-3 md:p-4">
           <ChatArea channel={currentChannel} />
         </div>
       </div>
