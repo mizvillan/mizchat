@@ -45,8 +45,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900/90 w-full max-w-md rounded-2xl shadow-2xl border border-white/10 overflow-hidden relative">
-        <div className="h-24 bg-gradient-to-r from-indigo-500/80 via-purple-500/70 to-fuchsia-500/70 relative">
+      <div className="bg-slate-900/95 w-full max-w-md rounded-2xl shadow-2xl border border-white/10 overflow-hidden relative">
+        <div className="h-32 bg-gradient-to-r from-indigo-500/80 via-purple-500/70 to-fuchsia-500/70 relative">
           <button 
             onClick={onClose}
             className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
@@ -55,9 +55,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           </button>
         </div>
 
-        <div className="px-6 pb-6 relative">
-          <div className="absolute -top-10 left-6 group cursor-pointer">
-            <div className="relative w-20 h-20 rounded-full border-4 border-slate-950 overflow-hidden bg-white/5 shadow-lg">
+        <div className="px-6 pb-6 pt-14 relative">
+          <div className="absolute -top-12 left-6 group cursor-pointer">
+            <div className="relative w-24 h-24 rounded-full border-4 border-slate-950 overflow-hidden bg-white/5 shadow-lg">
               <img 
                 src={file ? URL.createObjectURL(file) : resolvedAvatar} 
                 className="w-full h-full object-cover" 
@@ -75,14 +75,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="mt-14 space-y-4">
+          <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold text-white">{user?.display_name}</h2>
-              <p className="text-zinc-400">@{user?.username}</p>
+              <p className="text-zinc-400 text-sm">@{user?.username}</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">About Me</label>
+              <label className="block text-xs font-bold text-zinc-400 uppercase mb-2 tracking-wider">About Me</label>
               <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
