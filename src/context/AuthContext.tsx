@@ -16,7 +16,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/me')
+    fetch('/api/me', { credentials: 'include' })
       .then(res => {
         if (res.ok) return res.json();
         throw new Error('Not authenticated');
@@ -31,7 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
   };
 

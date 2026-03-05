@@ -4,6 +4,7 @@ export interface User {
   display_name: string;
   avatar?: string;
   bio?: string;
+  status?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
   is_admin: number; // 0 or 1
   created_at?: string;
 }
@@ -17,6 +18,7 @@ export interface Channel {
 export interface Message {
   id: string;
   channel_id: string;
+  group_id?: string;
   user_id: string;
   content: string;
   type: 'text' | 'image' | 'file' | 'voice';
@@ -35,6 +37,13 @@ export interface Friend {
   username: string;
   display_name: string;
   avatar?: string;
+  presence?: 'online' | 'idle' | 'dnd' | 'invisible' | 'offline';
   status: 'pending' | 'accepted' | 'blocked';
   requester_id: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  owner_id: string;
 }

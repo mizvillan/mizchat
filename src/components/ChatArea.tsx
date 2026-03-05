@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { Channel, Message as MessageType } from '../types';
+import { Channel, Group, Message as MessageType } from '../types';
 import { Message } from './Message';
 import { Plus, Smile, Mic, Send, X, Paperclip, Image as ImageIcon, Hash, Users, MessageSquare } from 'lucide-react';
 
 interface ChatAreaProps {
   channel: Channel | null;
+  group: Group | null;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
+export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
   const { socket } = useSocket();
   const { user } = useAuth();
   const [messages, setMessages] = useState<MessageType[]>([]);
@@ -28,53 +29,96 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
   };
 
   useEffect(() => {
-    if (!socket || !channel) return;
+    if (!socket || (!channel && !group)) return;
 
-    socket.emit('join_channel', channel.id);
+    setMessages([]);
+    setReplyingTo(null);
+    setFile(null);
+    setInputValue('');
 
-    socket.on('message_history', ({ channelId, messages: history }) => {
-      if (channelId === channel.id) {
+    if (group) {
+      socket.emit('join_group', { groupId: group.id });
+    } else if (channel) {
+      socket.emit('join_channel', channel.id);
+    }
+
+    const handleChannelHistory = ({ channelId, messages: history }) => {
+      if (channel && channelId === channel.id) {
         setMessages(history);
         scrollToBottom();
       }
-    });
-
-    socket.on('receive_message', (message: MessageType) => {
-      if (message.channel_id === channel.id) {
+    };
+    const handleChannelReceive = (message: MessageType) => {
+      if (channel && message.channel_id === channel.id) {
         setMessages(prev => [...prev, message]);
         scrollToBottom();
       }
-    });
-
-    socket.on('message_edited', ({ messageId, newContent, channelId }) => {
-      if (channelId === channel.id) {
+    };
+    const handleChannelEdit = ({ messageId, newContent, channelId }) => {
+      if (channel && channelId === channel.id) {
         setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: 1 } : m));
       }
-    });
-
-    socket.on('message_deleted', ({ messageId, channelId }) => {
-      if (channelId === channel.id) {
+    };
+    const handleChannelDelete = ({ messageId, channelId }) => {
+      if (channel && channelId === channel.id) {
         setMessages(prev => prev.filter(m => m.id !== messageId));
       }
-    });
-
-    socket.on('channel_cleared', ({ channelId }) => {
-      if (channelId === channel.id) {
+    };
+    const handleChannelCleared = ({ channelId }) => {
+      if (channel && channelId === channel.id) {
         setMessages([]);
       }
-    });
+    };
+
+    const handleGroupHistory = ({ groupId, messages: history }) => {
+      if (group && groupId === group.id) {
+        setMessages(history);
+        scrollToBottom();
+      }
+    };
+    const handleGroupReceive = ({ groupId, message }) => {
+      if (group && groupId === group.id) {
+        setMessages(prev => [...prev, message]);
+        scrollToBottom();
+      }
+    };
+    const handleGroupEdit = ({ messageId, newContent, groupId }) => {
+      if (group && groupId === group.id) {
+        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: newContent, is_edited: 1 } : m));
+      }
+    };
+    const handleGroupDelete = ({ messageId, groupId }) => {
+      if (group && groupId === group.id) {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+      }
+    };
+
+    socket.on('message_history', handleChannelHistory);
+    socket.on('receive_message', handleChannelReceive);
+    socket.on('message_edited', handleChannelEdit);
+    socket.on('message_deleted', handleChannelDelete);
+    socket.on('channel_cleared', handleChannelCleared);
+
+    socket.on('group_history', handleGroupHistory);
+    socket.on('group_message', handleGroupReceive);
+    socket.on('group_message_edited', handleGroupEdit);
+    socket.on('group_message_deleted', handleGroupDelete);
 
     return () => {
-      socket.off('message_history');
-      socket.off('receive_message');
-      socket.off('message_edited');
-      socket.off('message_deleted');
-      socket.off('channel_cleared');
+      socket.off('message_history', handleChannelHistory);
+      socket.off('receive_message', handleChannelReceive);
+      socket.off('message_edited', handleChannelEdit);
+      socket.off('message_deleted', handleChannelDelete);
+      socket.off('channel_cleared', handleChannelCleared);
+      socket.off('group_history', handleGroupHistory);
+      socket.off('group_message', handleGroupReceive);
+      socket.off('group_message_edited', handleGroupEdit);
+      socket.off('group_message_deleted', handleGroupDelete);
     };
-  }, [socket, channel]);
+  }, [socket, channel, group]);
 
   const handleSendMessage = async () => {
-    if ((!inputValue.trim() && !file) || !channel || !socket) return;
+    if ((!inputValue.trim() && !file) || (!channel && !group) || !socket) return;
 
     let attachmentUrl = '';
     let type = 'text';
@@ -97,13 +141,23 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
       }
     }
 
-    socket.emit('send_message', {
-      channelId: channel.id,
-      content: inputValue,
-      type,
-      attachmentUrl,
-      replyToId: replyingTo?.id
-    });
+    if (group) {
+      socket.emit('send_group_message', {
+        groupId: group.id,
+        content: inputValue,
+        type,
+        attachmentUrl,
+        replyToId: replyingTo?.id
+      });
+    } else if (channel) {
+      socket.emit('send_message', {
+        channelId: channel.id,
+        content: inputValue,
+        type,
+        attachmentUrl,
+        replyToId: replyingTo?.id
+      });
+    }
 
     setInputValue('');
     setFile(null);
@@ -152,12 +206,21 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await res.json();
             
-            socket?.emit('send_message', {
-                channelId: channel?.id,
-                content: '',
-                type: 'voice',
-                attachmentUrl: data.url
-            });
+            if (group) {
+                socket?.emit('send_group_message', {
+                    groupId: group.id,
+                    content: '',
+                    type: 'voice',
+                    attachmentUrl: data.url
+                });
+            } else {
+                socket?.emit('send_message', {
+                    channelId: channel?.id,
+                    content: '',
+                    type: 'voice',
+                    attachmentUrl: data.url
+                });
+            }
         } catch (err) {
             console.error('Voice upload failed', err);
         }
@@ -181,29 +244,33 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
     }
   };
 
-  if (!channel) {
+  if (!channel && !group) {
     return (
       <div className="flex-1 flex items-center justify-center panel rounded-2xl text-zinc-400 flex-col gap-4 animate-fade-up">
         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center border border-white/10">
             <MessageSquare className="w-8 h-8 text-zinc-300" />
         </div>
         <div className="text-center">
-            <h3 className="text-lg font-bold text-white mb-1">Welcome to Discord Clone</h3>
-            <p className="text-sm text-zinc-400">Select a channel to start chatting</p>
+            <h3 className="text-lg font-bold text-white mb-1">Welcome to MIZCHAT</h3>
+            <p className="text-sm text-zinc-400">Select a channel or group to start chatting</p>
         </div>
       </div>
     );
   }
+
+  const activeName = group ? group.name : channel?.name;
+  const isGroup = Boolean(group);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col panel rounded-2xl relative overflow-hidden animate-fade-up">
       {/* Header */}
       <div className="h-12 panel-header flex items-center px-4 justify-between shadow-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Hash className="w-5 h-5 text-zinc-400" />
-          <span className="font-bold text-white text-base">{channel.name}</span>
-          {channel.type === 'voice' && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Voice</span>}
-          {channel.name.toLowerCase() === 'general' && <span className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Default Channel"></span>}
+          {isGroup ? <Users className="w-5 h-5 text-zinc-400" /> : <Hash className="w-5 h-5 text-zinc-400" />}
+          <span className="font-bold text-white text-base">{activeName}</span>
+          {!isGroup && channel?.type === 'voice' && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Voice</span>}
+          {!isGroup && channel?.name.toLowerCase() === 'general' && <span className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Default Channel"></span>}
+          {isGroup && <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Group</span>}
         </div>
         
         <div className="flex items-center gap-4">
@@ -214,7 +281,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
                 </button>
                 <div className="w-[1px] h-4 bg-zinc-600"></div>
                 {/* Admin Tools */}
-                {user?.is_admin === 1 && (
+                {!isGroup && user?.is_admin === 1 && (
                     <div className="flex gap-2">
                         <button 
                             onClick={() => {
@@ -247,10 +314,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
         {/* Channel Welcome Message */}
         <div className="mb-8 mt-4 px-4 animate-fade-up">
             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/10">
-                <Hash className="w-10 h-10 text-white" />
+                {isGroup ? <Users className="w-10 h-10 text-white" /> : <Hash className="w-10 h-10 text-white" />}
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome to #{channel.name}!</h1>
-            <p className="text-zinc-400">This is the start of the <span className="font-bold text-zinc-300">#{channel.name}</span> channel.</p>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              {isGroup ? `Welcome to ${activeName}!` : `Welcome to #${activeName}!`}
+            </h1>
+            <p className="text-zinc-400">
+              {isGroup
+                ? `This is the start of the ${activeName} group.`
+                : `This is the start of the #${activeName} channel.`}
+            </p>
         </div>
 
         {messages.map((msg, i) => (
@@ -258,8 +331,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
             key={msg.id} 
             message={msg} 
             onReply={setReplyingTo}
-            onEdit={(id, content) => socket?.emit('edit_message', { messageId: id, newContent: content })}
-            onDelete={(id) => socket?.emit('delete_message', { messageId: id })}
+            onEdit={(id, content) => {
+              if (group) socket?.emit('edit_group_message', { messageId: id, newContent: content });
+              else socket?.emit('edit_message', { messageId: id, newContent: content });
+            }}
+            onDelete={(id) => {
+              if (group) socket?.emit('delete_group_message', { messageId: id });
+              else socket?.emit('delete_message', { messageId: id });
+            }}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -313,7 +392,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder={`Message #${channel.name}`}
+                placeholder={isGroup ? `Message ${activeName}` : `Message #${activeName}`}
                 className="flex-1 bg-transparent text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none py-1 max-h-[50vh] min-h-[24px] text-[15px]"
                 rows={1}
                 style={{ height: 'auto', overflow: 'hidden' }}
@@ -374,7 +453,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel }) => {
             </div>
         </div>
         <div className="text-[10px] text-zinc-500 mt-2 text-right select-none font-mono opacity-40">
-            Discord Clone
+            MIZCHAT
         </div>
       </div>
     </div>

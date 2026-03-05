@@ -14,7 +14,7 @@ export const ServerRail: React.FC = () => {
 
       <div className="w-8 h-[2px] bg-white/10 rounded-lg mx-auto" />
 
-      {/* Server 1 (Discord Clone Main) */}
+      {/* Server 1 (MIZCHAT Main) */}
       <div className="relative group">
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-white rounded-r-full -ml-1 transition-all duration-200" />
         <button className="w-12 h-12 bg-indigo-500 rounded-[16px] transition-all duration-200 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">

@@ -15,6 +15,20 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
     selectedUser?.avatar && !selectedUser.avatar.includes('ui-avatars.com')
       ? selectedUser.avatar
       : `https://ui-avatars.com/api/?name=${selectedInitial}&background=3b82f6&color=ffffff&size=256`;
+  const statusColor = (status?: string) => {
+    if (status === 'online') return 'bg-green-500';
+    if (status === 'idle') return 'bg-yellow-400';
+    if (status === 'dnd') return 'bg-red-500';
+    if (status === 'invisible') return 'bg-zinc-500';
+    return 'bg-zinc-600';
+  };
+  const statusLabel = (status?: string) => {
+    if (status === 'online') return 'Online';
+    if (status === 'idle') return 'Idle';
+    if (status === 'dnd') return 'Do Not Disturb';
+    if (status === 'invisible') return 'Invisible';
+    return 'Offline';
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -29,11 +43,16 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
       socket.emit('get_active_users');
     });
 
+    socket.on('user_updated', () => {
+      socket.emit('get_active_users');
+    });
+
     socket.emit('get_active_users');
 
     return () => {
       socket.off('active_users');
       socket.off('presence_global');
+      socket.off('user_updated');
     };
   }, [socket]);
 
@@ -58,7 +77,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
                   alt="" 
                 />
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-zinc-800 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className={`w-2 h-2 rounded-full ${statusColor(user.status)}`}></div>
                 </div>
               </div>
               <div className="min-w-0">
@@ -67,6 +86,9 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
                 </div>
                 {user.bio && (
                   <div className="text-[11px] text-zinc-500 truncate max-w-[140px]">{user.bio}</div>
+                )}
+                {!user.bio && (
+                  <div className="text-[11px] text-zinc-500 truncate max-w-[140px]">{statusLabel(user.status)}</div>
                 )}
               </div>
             </button>
@@ -89,7 +111,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
                   className="w-20 h-20 rounded-full object-cover border-4 border-slate-950" 
                   alt="" 
                 />
-                <div className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 rounded-full border-4 border-zinc-900"></div>
+                <div className={`absolute bottom-2 right-2 w-5 h-5 rounded-full border-4 border-zinc-900 ${statusColor(selectedUser.status)}`}></div>
               </div>
 
               <div className="mt-6">
@@ -103,7 +125,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
                     </h2>
                     <p className="text-zinc-400 text-sm font-mono">@{selectedUser.username}</p>
                   </div>
-                  <span className="text-[11px] text-zinc-500 uppercase tracking-widest">Online</span>
+                  <span className="text-[11px] text-zinc-500 uppercase tracking-widest">{statusLabel(selectedUser.status)}</span>
                 </div>
                 
                 <div className="mt-4 bg-zinc-950/50 rounded-lg p-3 border border-zinc-800">

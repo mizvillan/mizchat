@@ -16,6 +16,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 const PORT = Number(process.env.PORT) || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'discord-clone-secret-key-change-me';
+app.set('trust proxy', 1);
 
 // Database Setup
 const db = new Database('discord-clone.db');
@@ -30,6 +31,7 @@ db.exec(`
     password TEXT,
     avatar TEXT,
     bio TEXT,
+    status TEXT DEFAULT 'online',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_admin INTEGER DEFAULT 0
   );
@@ -66,7 +68,42 @@ db.exec(`
     id TEXT PRIMARY KEY,
     participants TEXT -- JSON array of user_ids
   );
+
+  CREATE TABLE IF NOT EXISTS groups (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    owner_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS group_members (
+    group_id TEXT,
+    user_id TEXT,
+    role TEXT DEFAULT 'member',
+    PRIMARY KEY (group_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS group_messages (
+    id TEXT PRIMARY KEY,
+    group_id TEXT,
+    user_id TEXT,
+    content TEXT,
+    type TEXT DEFAULT 'text',
+    attachment_url TEXT,
+    reply_to_id TEXT,
+    is_edited INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+// Ensure users.status exists (older DBs)
+try {
+  const cols = db.prepare("PRAGMA table_info(users)").all();
+  const hasStatus = cols.some((c: any) => c.name === 'status');
+  if (!hasStatus) {
+    db.exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'online'");
+  }
+} catch {}
 
 // Ensure only the main general channel exists
 db.prepare("DELETE FROM channels WHERE lower(name) NOT IN ('general')").run();
@@ -186,8 +223,8 @@ app.post('/api/register', async (req, res) => {
     stmt.run(userId, username, hashedPassword, displayName || username, isFirstUser || isAdmin ? 1 : 0);
 
     const token = jwt.sign({ id: userId, username, isAdmin: isFirstUser || isAdmin }, JWT_SECRET);
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
-    res.json({ id: userId, username, displayName, isAdmin: isFirstUser || isAdmin });
+    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 1000 * 60 * 60 * 24 * 30, path: '/' });
+    res.json({ id: userId, username, displayName, isAdmin: isFirstUser || isAdmin, status: 'online' });
   } catch (err) {
     if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       return res.status(400).json({ error: 'Username already exists' });
@@ -206,13 +243,14 @@ app.post('/api/login', async (req, res) => {
   }
 
   const token = jwt.sign({ id: user.id, username: user.username, isAdmin: user.is_admin }, JWT_SECRET);
-  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 1000 * 60 * 60 * 24 * 30, path: '/' });
   res.json({ 
     id: user.id, 
     username: user.username, 
     displayName: user.display_name, 
     avatar: user.avatar,
     bio: user.bio,
+    status: user.status,
     isAdmin: user.is_admin,
     created_at: user.created_at
   });
@@ -220,13 +258,13 @@ app.post('/api/login', async (req, res) => {
 
 // Logout
 app.post('/api/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', { path: '/' });
   res.json({ success: true });
 });
 
 // Get Me
 app.get('/api/me', authenticateToken, (req, res) => {
-  const user = db.prepare('SELECT id, username, display_name, avatar, bio, created_at, is_admin FROM users WHERE id = ?').get((req as any).user.id);
+  const user = db.prepare('SELECT id, username, display_name, avatar, bio, status, created_at, is_admin FROM users WHERE id = ?').get((req as any).user.id);
   if (!user) return res.sendStatus(404);
   res.json({
     id: user.id,
@@ -234,6 +272,7 @@ app.get('/api/me', authenticateToken, (req, res) => {
     displayName: user.display_name,
     avatar: user.avatar,
     bio: user.bio,
+    status: user.status,
     isAdmin: user.is_admin,
     created_at: user.created_at
   });
@@ -270,8 +309,12 @@ io.on('connection', (socket) => {
   const userId = (socket as any).user.id;
   connectedUsers.set(userId, socket.id);
   
-  // Broadcast presence
-  io.emit('presence_global', { userId, status: 'online' });
+  // Update status on connect unless invisible
+  const currentStatus = db.prepare('SELECT status FROM users WHERE id = ?').get(userId)?.status || 'online';
+  if (currentStatus !== 'invisible') {
+    db.prepare('UPDATE users SET status = ? WHERE id = ?').run('online', userId);
+  }
+  io.emit('presence_global', { userId, status: currentStatus === 'invisible' ? 'invisible' : 'online' });
 
   // Send initial data
   const channels = db.prepare(`
@@ -283,7 +326,7 @@ io.on('connection', (socket) => {
   socket.emit('channels_list', channels);
 
   // Helper to get user info
-  const getUserInfo = (uid) => db.prepare('SELECT id, username, display_name, avatar, bio, is_admin FROM users WHERE id = ?').get(uid);
+  const getUserInfo = (uid) => db.prepare('SELECT id, username, display_name, avatar, bio, status, is_admin FROM users WHERE id = ?').get(uid);
 
   // Join Channel
   socket.on('join_channel', (channelId) => {
@@ -414,7 +457,7 @@ io.on('connection', (socket) => {
   // Get Friends List
   socket.on('get_friends', () => {
       const friends = db.prepare(`
-        SELECT u.id, u.username, u.display_name, u.avatar, f.status, f.user_id as requester_id
+        SELECT u.id, u.username, u.display_name, u.avatar, u.status as presence, f.status, f.user_id as requester_id
         FROM friends f
         JOIN users u ON (f.user_id = u.id OR f.friend_id = u.id)
         WHERE (f.user_id = ? OR f.friend_id = ?) AND u.id != ?
@@ -428,8 +471,9 @@ io.on('connection', (socket) => {
       if (activeUserIds.length === 0) return socket.emit('active_users', []);
       
       const placeholders = activeUserIds.map(() => '?').join(',');
-      const users = db.prepare(`SELECT id, username, display_name, avatar, bio, is_admin FROM users WHERE id IN (${placeholders})`).all(...activeUserIds);
-      socket.emit('active_users', users);
+      const users = db.prepare(`SELECT id, username, display_name, avatar, bio, status, is_admin FROM users WHERE id IN (${placeholders})`).all(...activeUserIds);
+      const filtered = users.filter(u => u.status !== 'invisible' && u.status !== 'offline');
+      socket.emit('active_users', filtered);
   });
 
   // Profile Updates
@@ -445,8 +489,123 @@ io.on('connection', (socket) => {
       io.emit('user_updated', updatedUser);
   });
 
+  // Groups
+  socket.on('groups_get', () => {
+    const groups = db.prepare(`
+      SELECT g.id, g.name, g.owner_id
+      FROM groups g
+      JOIN group_members m ON m.group_id = g.id
+      WHERE m.user_id = ?
+      ORDER BY g.created_at DESC
+    `).all(userId);
+    socket.emit('groups_list', { groups });
+  });
+
+  socket.on('group_create', ({ name, memberIds }) => {
+    const groupName = String(name || '').trim();
+    if (!groupName) return;
+    const groupId = uuidv4();
+    const memberSet = new Set([userId, ...(Array.isArray(memberIds) ? memberIds : [])]);
+    const insertGroup = db.prepare('INSERT INTO groups (id, name, owner_id) VALUES (?, ?, ?)');
+    const insertMember = db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)');
+    const tx = db.transaction(() => {
+      insertGroup.run(groupId, groupName, userId);
+      for (const uid of memberSet) insertMember.run(groupId, uid, uid === userId ? 'owner' : 'member');
+    });
+    tx();
+    socket.emit('group_created', { id: groupId, name: groupName });
+    socket.emit('groups_get');
+    memberSet.forEach(uid => {
+      if (connectedUsers.has(uid)) {
+        io.to(connectedUsers.get(uid)).emit('groups_get');
+      }
+    });
+  });
+
+  socket.on('group_add_members', ({ groupId, memberIds }) => {
+    const gid = String(groupId || '');
+    if (!gid) return;
+    const owner = db.prepare('SELECT owner_id FROM groups WHERE id = ?').get(gid);
+    if (!owner || owner.owner_id !== userId) return;
+    const insertMember = db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)');
+    const ids = Array.isArray(memberIds) ? memberIds : [];
+    ids.forEach((uid) => insertMember.run(gid, uid, 'member'));
+    socket.emit('groups_get');
+    ids.forEach(uid => {
+      if (connectedUsers.has(uid)) {
+        io.to(connectedUsers.get(uid)).emit('groups_get');
+      }
+    });
+  });
+
+  // Set Status
+  socket.on('set_status', ({ status }) => {
+    const allowed = ['online', 'idle', 'dnd', 'invisible'];
+    if (!allowed.includes(status)) return;
+    db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, userId);
+    const updated = getUserInfo(userId);
+    socket.emit('profile_updated', updated);
+    io.emit('user_updated', updated);
+    io.emit('presence_global', { userId, status });
+  });
+
+  socket.on('join_group', ({ groupId }) => {
+    const gid = String(groupId || '');
+    if (!gid) return;
+    const isMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(gid, userId);
+    if (!isMember) return;
+    socket.join(`group:${gid}`);
+    const messages = db.prepare(`
+      SELECT m.*, u.username, u.display_name, u.avatar, u.is_admin 
+      FROM group_messages m 
+      JOIN users u ON m.user_id = u.id 
+      WHERE m.group_id = ? 
+      ORDER BY m.created_at ASC LIMIT 50
+    `).all(gid);
+    socket.emit('group_history', { groupId: gid, messages });
+  });
+
+  socket.on('send_group_message', ({ groupId, content, type, attachmentUrl, replyToId }) => {
+    const gid = String(groupId || '');
+    if (!gid) return;
+    const isMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(gid, userId);
+    if (!isMember) return;
+    const messageId = uuidv4();
+    const stmt = db.prepare('INSERT INTO group_messages (id, group_id, user_id, content, type, attachment_url, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    stmt.run(messageId, gid, userId, content, type || 'text', attachmentUrl, replyToId);
+    const message = db.prepare(`
+      SELECT m.*, u.username, u.display_name, u.avatar, u.is_admin 
+      FROM group_messages m 
+      JOIN users u ON m.user_id = u.id 
+      WHERE m.id = ?
+    `).get(messageId);
+    io.to(`group:${gid}`).emit('group_message', { groupId: gid, message });
+  });
+
+  socket.on('edit_group_message', ({ messageId, newContent }) => {
+    const msg = db.prepare('SELECT * FROM group_messages WHERE id = ?').get(messageId);
+    if (!msg) return;
+    const user = getUserInfo(userId);
+    if (msg.user_id !== userId && !user.is_admin) return;
+    db.prepare('UPDATE group_messages SET content = ?, is_edited = 1 WHERE id = ?').run(newContent, messageId);
+    io.to(`group:${msg.group_id}`).emit('group_message_edited', { messageId, newContent, groupId: msg.group_id });
+  });
+
+  socket.on('delete_group_message', ({ messageId }) => {
+    const msg = db.prepare('SELECT * FROM group_messages WHERE id = ?').get(messageId);
+    if (!msg) return;
+    const user = getUserInfo(userId);
+    if (msg.user_id !== userId && !user.is_admin) return;
+    db.prepare('DELETE FROM group_messages WHERE id = ?').run(messageId);
+    io.to(`group:${msg.group_id}`).emit('group_message_deleted', { messageId, groupId: msg.group_id });
+  });
+
   socket.on('disconnect', () => {
     connectedUsers.delete(userId);
+    const current = db.prepare('SELECT status FROM users WHERE id = ?').get(userId)?.status || 'online';
+    if (current !== 'invisible') {
+      db.prepare('UPDATE users SET status = ? WHERE id = ?').run('offline', userId);
+    }
     io.emit('presence_global', { userId, status: 'offline' });
   });
 });
