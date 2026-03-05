@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
@@ -17,6 +18,8 @@ const io = new Server(httpServer);
 const PORT = Number(process.env.PORT) || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'discord-clone-secret-key-change-me';
 app.set('trust proxy', 1);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Database Setup
 const db = new Database('discord-clone.db');
@@ -344,6 +347,8 @@ io.on('connection', (socket) => {
   // Send Message
   socket.on('send_message', (data) => {
     const { channelId, content, type, attachmentUrl, replyToId } = data;
+    const channel = db.prepare('SELECT id FROM channels WHERE id = ?').get(channelId);
+    if (!channel) return;
     const messageId = uuidv4();
     
     const stmt = db.prepare('INSERT INTO messages (id, channel_id, user_id, content, type, attachment_url, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
