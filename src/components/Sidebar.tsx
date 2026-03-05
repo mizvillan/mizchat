@@ -54,6 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
     if (presence === 'invisible') return 'Invisible';
     return 'Offline';
   };
+  const statusLabel = presenceLabel;
 
   useEffect(() => {
     if (!socket) return;
@@ -251,7 +252,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
         </div>
 
         {/* User User Bar */}
-        <div className="h-[56px] bg-slate-900/80 flex items-center px-2 border-t border-white/5 rounded-b-2xl md:rounded-b-2xl relative">
+        <div className="h-[56px] bg-slate-900/80 flex items-center px-2 border-t border-white/5 rounded-b-2xl md:rounded-b-2xl relative gap-2">
           <div 
             onClick={() => setShowProfileModal(true)}
             className="flex items-center hover:bg-white/5 p-1 rounded-md cursor-pointer flex-1 min-w-0 transition-colors group"
@@ -272,6 +273,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
               <div className="text-[11px] text-zinc-400 truncate leading-tight">#{user?.username}</div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowStatusMenu((v) => !v); }}
+            className="px-2 py-1 rounded-md text-xs text-zinc-300 hover:text-white hover:bg-white/5 flex items-center gap-2"
+            title="Change status"
+          >
+            <span className={`w-2 h-2 rounded-full ${statusColor}`}></span>
+            {statusLabel(status)}
+          </button>
           {showStatusMenu && (
             <div className="absolute bottom-14 left-2 bg-slate-900 border border-white/10 rounded-lg shadow-xl overflow-hidden z-20 min-w-[180px]">
               {[

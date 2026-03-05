@@ -423,12 +423,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
                       <Smile className="w-5 h-5" />
                     </button>
                     {showEmojiPicker && (
-                      <div className="absolute bottom-8 right-0 bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl grid grid-cols-6 gap-1 text-xl z-20">
+                      <div className="absolute bottom-8 right-0 bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl grid grid-cols-6 gap-1 z-20">
                         {['😀','😂','😎','😍','😭','😡','👍','🔥','💀','🤔','👀','⭐'].map((emoji) => (
                           <button
                             key={emoji}
                             type="button"
-                            className="hover:bg-white/10 rounded-md leading-none"
+                            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md text-lg leading-none"
                             onClick={() => {
                               setInputValue((prev) => prev + emoji);
                               setShowEmojiPicker(false);
