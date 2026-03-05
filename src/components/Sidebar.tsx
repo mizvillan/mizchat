@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
   const [channels, setChannels] = useState<Channel[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<Friend[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<Friend[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -75,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
     socket.on('friends_list', (list: Friend[]) => {
       setFriends(list.filter(f => f.status === 'accepted'));
       setFriendRequests(list.filter(f => f.status === 'pending' && f.requester_id !== user?.id));
+      setOutgoingRequests(list.filter(f => f.status === 'pending' && f.requester_id === user?.id));
     });
 
     socket.on('friend_request_received', () => {
@@ -88,6 +90,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
 
     socket.on('friend_error', (err: string) => {
       setFriendError(err);
+    });
+
+    socket.on('friend_request_canceled', () => {
+      socket.emit('get_friends');
     });
     
     socket.on('friend_request_sent', () => {
@@ -113,6 +119,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
       setFriends(prev => prev.map(f => f.id === updated.id ? { ...f, avatar: updated.avatar, display_name: updated.display_name, presence: updated.status } : f));
     });
 
+    socket.on('presence_global', ({ userId, status }) => {
+      setFriends(prev => prev.map(f => f.id === userId ? { ...f, presence: status } : f));
+    });
+
     socket.emit('get_friends');
     socket.emit('groups_get');
 
@@ -123,9 +133,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
       socket.off('friend_request_accepted');
       socket.off('friend_error');
       socket.off('friend_request_sent');
+      socket.off('friend_request_canceled');
       socket.off('groups_list');
       socket.off('profile_updated');
       socket.off('user_updated');
+      socket.off('presence_global');
     };
   }, [socket, user, currentChannel]);
 
@@ -140,6 +152,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
 
   const handleDecline = (id: string) => {
     socket?.emit('friend_request_decline', { requestId: id });
+  };
+
+  const handleCancelOutgoing = (targetId: string) => {
+    socket?.emit('friend_request_cancel', { targetId });
   };
 
   const handleCreateGroup = () => {
@@ -366,6 +382,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentChannel, setCurrentChan
                             <X className="w-4 h-4" />
                           </button>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {outgoingRequests.length > 0 && (
+                <div className="mb-6">
+                  <div className="text-xs font-bold text-zinc-400 uppercase mb-2">Outgoing</div>
+                  <div className="space-y-2">
+                    {outgoingRequests.map(req => (
+                      <div key={req.id} className="flex items-center justify-between bg-zinc-800/50 p-2 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <img src={(req.avatar && !req.avatar.includes('ui-avatars.com')) ? req.avatar : `https://ui-avatars.com/api/?name=${(req.display_name || req.username || 'M').trim().charAt(0).toUpperCase()}&background=3b82f6&color=ffffff&size=128`} className="w-8 h-8 rounded-full" />
+                          <div>
+                            <div className="text-sm font-medium text-white">{req.display_name}</div>
+                            <div className="text-xs text-zinc-400">@{req.username} • Pending</div>
+                          </div>
+                        </div>
+                        <button onClick={() => handleCancelOutgoing(req.id)} className="px-3 py-1.5 text-xs bg-zinc-700/40 hover:bg-zinc-700/60 text-zinc-200 rounded-md">
+                          Cancel
+                        </button>
                       </div>
                     ))}
                   </div>

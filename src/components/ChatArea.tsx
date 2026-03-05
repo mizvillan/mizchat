@@ -19,6 +19,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,7 +185,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      recordingStreamRef.current = stream;
+      const preferred = 'audio/webm;codecs=opus';
+      const recorder = MediaRecorder.isTypeSupported(preferred)
+        ? new MediaRecorder(stream, { mimeType: preferred } as any)
+        : new MediaRecorder(stream);
       setMediaRecorder(recorder);
       audioChunksRef.current = [];
       
@@ -195,6 +200,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
       };
 
       recorder.onstop = async () => {
+        // Stop tracks after we have the final data
+        recordingStreamRef.current?.getTracks().forEach(track => track.stop());
+        recordingStreamRef.current = null;
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const audioFile = new File([audioBlob], 'voice-note.webm', { type: 'audio/webm' });
         
@@ -228,7 +237,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
         audioChunksRef.current = [];
       };
 
-      recorder.start();
+      // timeslice => we actually receive data chunks while recording
+      recorder.start(250);
       setIsRecording(true);
     } catch (err) {
       console.error('Microphone access denied', err);
@@ -237,10 +247,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
 
   const stopRecording = () => {
     if (mediaRecorder && isRecording) {
+      try {
+        mediaRecorder.requestData();
+      } catch {}
       mediaRecorder.stop();
       setIsRecording(false);
-      // Stop all tracks
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
   };
 
@@ -408,6 +419,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
                   <button 
                     onMouseDown={startRecording}
                     onMouseUp={stopRecording}
+                    onTouchStart={startRecording}
+                    onTouchEnd={stopRecording}
                     className={`transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-zinc-300 hover:text-white'}`}
                     title="Hold to record"
                   >
@@ -423,12 +436,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ channel, group }) => {
                       <Smile className="w-5 h-5" />
                     </button>
                     {showEmojiPicker && (
-                      <div className="absolute bottom-8 right-0 bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl grid grid-cols-6 gap-1 z-20">
+                      <div
+                        className="absolute bottom-8 right-0 bg-slate-900 border border-white/10 rounded-lg p-2 shadow-xl grid grid-cols-6 gap-1 z-20"
+                        style={{
+                          fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+                          fontSize: 18,
+                          lineHeight: 1,
+                        }}
+                      >
                         {['😀','😂','😎','😍','😭','😡','👍','🔥','💀','🤔','👀','⭐'].map((emoji) => (
                           <button
                             key={emoji}
                             type="button"
-                            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md text-lg leading-none"
+                            className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-md leading-none"
                             onClick={() => {
                               setInputValue((prev) => prev + emoji);
                               setShowEmojiPicker(false);

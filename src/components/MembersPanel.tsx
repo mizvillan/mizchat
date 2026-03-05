@@ -39,8 +39,22 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({ isMobileOpen }) => {
       setActiveUsers(unique);
     });
 
-    socket.on('presence_global', () => {
-      socket.emit('get_active_users');
+    socket.on('presence_global', ({ userId, status }) => {
+      setActiveUsers((prev) => {
+        const next = [...prev];
+        const idx = next.findIndex(u => u.id === userId);
+        if (status === 'offline' || status === 'invisible') {
+          if (idx !== -1) next.splice(idx, 1);
+          return next;
+        }
+        if (idx !== -1) {
+          next[idx] = { ...next[idx], status };
+          return next;
+        }
+        // Unknown user changed presence; refresh list
+        socket.emit('get_active_users');
+        return next;
+      });
     });
 
     socket.on('user_updated', () => {

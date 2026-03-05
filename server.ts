@@ -459,6 +459,16 @@ io.on('connection', (socket) => {
       // Notify sender? Maybe not necessary for decline
   });
 
+  socket.on('friend_request_cancel', ({ targetId }) => {
+      const tid = String(targetId || '');
+      if (!tid) return;
+      db.prepare('DELETE FROM friends WHERE user_id = ? AND friend_id = ? AND status = ?').run(userId, tid, 'pending');
+      socket.emit('friend_request_canceled', { targetId: tid });
+      if (connectedUsers.has(tid)) {
+        io.to(connectedUsers.get(tid)).emit('friend_request_canceled', { from: userId });
+      }
+  });
+
   // Get Friends List
   socket.on('get_friends', () => {
       const friends = db.prepare(`
