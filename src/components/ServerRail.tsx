@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, Download } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 export const ServerRail: React.FC = () => {
   return (
@@ -30,18 +30,7 @@ export const ServerRail: React.FC = () => {
         </button>
       </div>
 
-      {/* Download Source */}
-      <div className="relative group mt-auto">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2 bg-white rounded-r-full -ml-1 opacity-0 group-hover:opacity-100 group-hover:h-5 transition-all duration-200" />
-        <a 
-          href="/api/source" 
-          download="discord_clone_source.txt"
-          className="w-12 h-12 bg-white/5 group-hover:bg-white/10 rounded-[24px] group-hover:rounded-[16px] transition-all duration-200 flex items-center justify-center text-zinc-300 group-hover:text-white"
-          title="Download Source Code"
-        >
-          <Download className="w-6 h-6" />
-        </a>
-      </div>
+      
     </div>
   );
 };
